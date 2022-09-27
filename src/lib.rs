@@ -1,13 +1,14 @@
 // use std::env;
 use log::{error, info};
 use serenity::async_trait;
-// use serenity::model::channel::Message;
+use serenity::prelude::*;
+
+use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
-use serenity::model::prelude::*;
+use serenity::model::prelude::GuildId;
 use serenity::model::application::interaction::Interaction;
 use serenity::model::application::interaction::InteractionResponseType;
-use serenity::prelude::*;
-use serenity::model::prelude::GuildId;
+
 use shuttle_service::error::CustomError;
 use shuttle_service::SecretStore;
 use sqlx::PgPool;
@@ -16,13 +17,13 @@ struct Bot;
 
 #[async_trait]
 impl EventHandler for Bot {
-  // async fn message(&self, ctx: Context, msg: Message) {
-  //     if msg.content == "!hello" {
-  //         if let Err(e) = msg.channel_id.say(&ctx.http, "world!").await {
-  //             error!("Error sending message: {:?}", e);
-  //         }
-  //     }
-  // }
+  async fn message(&self, ctx: Context, msg: Message) {
+
+    // If Gordon is mentioned in the discord message, act.
+    if msg.mentions.iter().any( |usr| usr.id == ctx.cache.current_user().id) {
+      println!("Gordon was mentioned.");
+    }
+  }
 
   async fn ready(&self, ctx: Context, ready: Ready) {
     info!("{} is connected!", ready.user.name);

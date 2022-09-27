@@ -10,3 +10,4 @@ shuttle-service = { version = "0.5.2", features = ["bot-serenity", "sqlx-postgre
 log = "0.4.17"
 serenity = { version = "0.11.5", default-features = false, features = ["client", "gateway", "rustls_backend", "model"] }
 sqlx = { version = "0.6.2", features = ["runtime-tokio-native-tls", "postgres"] }
+serenity_utils = "0.7.0"
