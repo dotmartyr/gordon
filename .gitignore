@@ -1,3 +1,2 @@
 /target
-/Cargo.lock
-Secrets.toml
+Shuttle.toml
