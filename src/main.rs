@@ -48,7 +48,7 @@ impl EventHandler for Handler {
 impl Handler {
     async fn get_openai_response(&self, user_message: &str) -> Result<String> {
         let prompt = format!(
-            "{} Also, please answer as if you are an LA cholo gangster.",
+            "{} Also, please answer as nerdy sounding as possible",
             user_message
         );
 
