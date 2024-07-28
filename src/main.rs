@@ -55,7 +55,7 @@ impl Handler {
         let request_body = serde_json::json!({
             "model": "gpt-4o",
             "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": 150,
+            "max_tokens": 4096,
             "temperature": 0.7,
             "top_p": 1.0,
             "frequency_penalty": 0.0,
