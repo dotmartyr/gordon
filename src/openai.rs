@@ -19,17 +19,9 @@ impl OpenAIClient {
     }
 
     pub async fn ask(&self, prompt: &str) -> Result<String> {
-        let modified_prompt = self.construct_prompt(prompt);
-        let request_body = self.create_request_body(&modified_prompt);
+        let request_body = self.create_request_body(&prompt);
         let response = self.send_request(&request_body).await?;
         self.parse_response(response).await
-    }
-
-    fn construct_prompt(&self, prompt: &str) -> String {
-        format!(
-            "{} -- Also, please answer fully but as concisely as possible.",
-            prompt
-        )
     }
 
     fn create_request_body(&self, prompt: &str) -> Value {

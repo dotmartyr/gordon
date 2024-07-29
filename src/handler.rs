@@ -4,7 +4,7 @@ use serenity::async_trait;
 use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
 use serenity::model::prelude::UserId;
-use serenity::prelude::*;
+use serenity::prelude::{Context, EventHandler};
 
 pub struct Handler {
     pub bot_id: UserId,
