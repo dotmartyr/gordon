@@ -1,102 +1,15 @@
-use anyhow::{anyhow, Result};
-use reqwest::Client as ReqwestClient;
-use serenity::async_trait;
-use serenity::model::channel::Message;
-use serenity::model::gateway::Ready;
-use serenity::model::prelude::UserId;
+mod handler;
+mod openai;
+
+use std::collections::HashMap;
+
+use handler::{string_to_user_id, Handler};
+use openai::OpenAIClient;
 use serenity::prelude::*;
-use shuttle_runtime::Error as ShuttleError;
-
-const OPENAI_API_URL: &str = "https://api.openai.com/v1/chat/completions";
-const OPENAI_MODEL: &str = "gpt-4o";
-
-struct Handler {
-    bot_id: UserId,
-    openai_client: ReqwestClient,
-    openai_api_key: String,
-}
+use shuttle_runtime::{Error as ShuttleError, SecretStore};
 
 struct Gordon {
     client: Client,
-}
-
-#[async_trait]
-impl EventHandler for Handler {
-    async fn message(&self, ctx: Context, msg: Message) {
-        if msg.mentions_user_id(self.bot_id) {
-            let response = self.get_openai_response(&msg.content).await;
-
-            match response {
-                Ok(reply) => {
-                    if let Err(why) = msg.channel_id.say(&ctx.http, reply).await {
-                        eprintln!("Error sending message: {:?}", why);
-                    }
-                }
-                Err(err) => {
-                    eprintln!("Error getting OpenAI response: {:?}", err);
-                }
-            }
-        } else if msg.content == "!ping" {
-            if let Err(why) = msg.channel_id.say(&ctx.http, "pong").await {
-                eprintln!("Error sending message: {:?}", why);
-            }
-        }
-    }
-
-    async fn ready(&self, _ctx: Context, ready: Ready) {
-        println!("{} is connected!", ready.user.name);
-    }
-}
-
-impl Handler {
-    async fn get_openai_response(&self, user_message: &str) -> Result<String> {
-        let prompt = format!(
-            "{} -- Also, please answer fully but as concisely as possible.",
-            user_message
-        );
-
-        let request_body = serde_json::json!({
-            "model": OPENAI_MODEL,
-            "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": 4096,
-            "temperature": 0.7,
-            "top_p": 1.0,
-            "frequency_penalty": 0.0,
-            "presence_penalty": 0.0
-        });
-
-        let response = self
-            .openai_client
-            .post(OPENAI_API_URL)
-            .header("Content-Type", "application/json")
-            .header("Authorization", format!("Bearer {}", self.openai_api_key))
-            .json(&request_body)
-            .send()
-            .await?;
-
-        if response.status().is_success() {
-            let response_body: serde_json::Value = response.json().await?;
-            println!("Response body: {}", response_body);
-
-            let reply = response_body["choices"][0]["message"]["content"]
-                .as_str()
-                .unwrap_or("I'm sorry, I couldn't understand that.")
-                .to_string();
-            Ok(reply)
-        } else {
-            Err(anyhow!(
-                "Failed to get response from OpenAI API: {}",
-                response.status()
-            ))
-        }
-    }
-}
-
-fn string_to_user_id(user_id_str: &str) -> Result<UserId> {
-    user_id_str
-        .parse::<u64>()
-        .map(UserId::new)
-        .map_err(|e| anyhow!("Failed to parse user ID: {}", e))
 }
 
 #[shuttle_runtime::async_trait]
@@ -109,19 +22,29 @@ impl shuttle_runtime::Service for Gordon {
     }
 }
 
+fn get_secrets(secrets: &SecretStore) -> Result<HashMap<String, String>, ShuttleError> {
+    let required_keys = ["DISCORD_TOKEN", "BOT_USER_ID", "OPENAI_API_KEY"];
+    let mut secrets_map = HashMap::new();
+
+    for &key in &required_keys {
+        let value = secrets.get(key).ok_or_else(|| {
+            ShuttleError::Custom(anyhow::anyhow!("Missing secret: {}", key).into())
+        })?;
+        secrets_map.insert(key.to_string(), value);
+    }
+
+    Ok(secrets_map)
+}
+
 #[shuttle_runtime::main]
 async fn shuttle_main(
     #[shuttle_runtime::Secrets] secrets: shuttle_runtime::SecretStore,
 ) -> Result<Gordon, ShuttleError> {
-    let token = secrets
-        .get("DISCORD_TOKEN")
-        .expect("Expected a token in the environment");
-    let bot_id_string = secrets
-        .get("BOT_USER_ID")
-        .expect("Expected a Bot ID in the environment");
-    let openai_api_key = secrets
-        .get("OPENAI_API_KEY")
-        .expect("Expected an OpenAI API key in the environment");
+    let secrets_map = get_secrets(&secrets)?;
+
+    let token = secrets_map.get("DISCORD_TOKEN").unwrap();
+    let discord_client_id = secrets_map.get("BOT_USER_ID").unwrap();
+    let openai_api_key = secrets_map.get("OPENAI_API_KEY").unwrap();
 
     let intents = GatewayIntents::GUILD_MESSAGES
         | GatewayIntents::DIRECT_MESSAGES
@@ -129,9 +52,8 @@ async fn shuttle_main(
 
     let serenity_client = Client::builder(&token, intents)
         .event_handler(Handler {
-            bot_id: string_to_user_id(&bot_id_string)?,
-            openai_client: ReqwestClient::new(),
-            openai_api_key,
+            bot_id: string_to_user_id(&discord_client_id)?,
+            openai_client: OpenAIClient::new(openai_api_key.clone()),
         })
         .await
         .expect("Err creating client");

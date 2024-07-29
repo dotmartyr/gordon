@@ -22,7 +22,7 @@ Create a `Secrets.toml` file in the root of your project with the following cont
 
 ```toml
 DISCORD_TOKEN = "YOUR_DISCORD_TOKEN"
-BOT_USER_ID = "YOUR_BOT_USER_ID"
+DISCORD_CLIENT_ID = "YOUR_DISCORD_APP_CLIENT_ID"
 OPENAI_API_KEY = "YOUR_OPENAI_API_KEY"
 ```
 
