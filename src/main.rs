@@ -6,8 +6,6 @@ use serenity::model::gateway::Ready;
 use serenity::model::prelude::UserId;
 use serenity::prelude::*;
 use shuttle_runtime::Error as ShuttleError;
-use tracing::{error, info};
-use tracing_subscriber;
 
 const OPENAI_API_URL: &str = "https://api.openai.com/v1/chat/completions";
 const OPENAI_MODEL: &str = "gpt-4o";
@@ -31,22 +29,22 @@ impl EventHandler for Handler {
             match response {
                 Ok(reply) => {
                     if let Err(why) = msg.channel_id.say(&ctx.http, reply).await {
-                        error!("Error sending message: {:?}", why);
+                        eprintln!("Error sending message: {:?}", why);
                     }
                 }
                 Err(err) => {
-                    error!("Error getting OpenAI response: {:?}", err);
+                    eprintln!("Error getting OpenAI response: {:?}", err);
                 }
             }
         } else if msg.content == "!ping" {
             if let Err(why) = msg.channel_id.say(&ctx.http, "pong").await {
-                error!("Error sending message: {:?}", why);
+                eprintln!("Error sending message: {:?}", why);
             }
         }
     }
 
     async fn ready(&self, _ctx: Context, ready: Ready) {
-        info!("{} is connected!", ready.user.name);
+        println!("{} is connected!", ready.user.name);
     }
 }
 
@@ -78,7 +76,7 @@ impl Handler {
 
         if response.status().is_success() {
             let response_body: serde_json::Value = response.json().await?;
-            info!("Response body: {}", response_body);
+            println!("Response body: {}", response_body);
 
             let reply = response_body["choices"][0]["message"]["content"]
                 .as_str()
@@ -115,8 +113,6 @@ impl shuttle_runtime::Service for Gordon {
 async fn shuttle_main(
     #[shuttle_runtime::Secrets] secrets: shuttle_runtime::SecretStore,
 ) -> Result<Gordon, ShuttleError> {
-    tracing_subscriber::fmt::init();
-
     let token = secrets
         .get("DISCORD_TOKEN")
         .expect("Expected a token in the environment");
