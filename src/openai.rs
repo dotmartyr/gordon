@@ -3,7 +3,7 @@ use reqwest::Client as ReqwestClient;
 use serde_json::{json, Value};
 
 const OPENAI_API_URL: &str = "https://api.openai.com/v1/chat/completions";
-const OPENAI_MODEL: &str = "gpt-4o";
+const OPENAI_MODEL: &str = "gpt-4o-mini";
 
 pub struct OpenAIClient {
     client: ReqwestClient,
