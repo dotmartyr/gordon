@@ -48,7 +48,7 @@ impl EventHandler for Handler {
 impl Handler {
     async fn get_openai_response(&self, user_message: &str) -> Result<String> {
         let prompt = format!(
-            "{} Also, please answer fully but as consisely as possible.",
+            "{} -- Also, please answer fully but as concisely as possible.",
             user_message
         );
 
@@ -73,6 +73,8 @@ impl Handler {
 
         if response.status().is_success() {
             let response_body: serde_json::Value = response.json().await?;
+            println!("Response body: {}", response_body);
+
             let reply = response_body["choices"][0]["message"]["content"]
                 .as_str()
                 .unwrap_or("I'm sorry, I couldn't understand that.")
