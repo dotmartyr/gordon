@@ -23,7 +23,7 @@ impl shuttle_runtime::Service for Gordon {
 }
 
 fn get_secrets(secrets: &SecretStore) -> Result<HashMap<String, String>, ShuttleError> {
-    let required_keys = ["DISCORD_TOKEN", "BOT_USER_ID", "OPENAI_API_KEY"];
+    let required_keys = ["DISCORD_TOKEN", "DISCORD_CLIENT_ID", "OPENAI_API_KEY"];
     let mut secrets_map = HashMap::new();
 
     for &key in &required_keys {
@@ -43,7 +43,7 @@ async fn shuttle_main(
     let secrets_map = get_secrets(&secrets)?;
 
     let token = secrets_map.get("DISCORD_TOKEN").unwrap();
-    let discord_client_id = secrets_map.get("BOT_USER_ID").unwrap();
+    let discord_client_id = secrets_map.get("DISCORD_CLIENT_ID").unwrap();
     let openai_api_key = secrets_map.get("OPENAI_API_KEY").unwrap();
 
     let intents = GatewayIntents::GUILD_MESSAGES
