@@ -6,6 +6,11 @@ use serenity::model::gateway::Ready;
 use serenity::model::prelude::UserId;
 use serenity::prelude::*;
 use shuttle_runtime::Error as ShuttleError;
+use tracing::{error, info};
+use tracing_subscriber;
+
+const OPENAI_API_URL: &str = "https://api.openai.com/v1/chat/completions";
+const OPENAI_MODEL: &str = "gpt-4o";
 
 struct Handler {
     bot_id: UserId,
@@ -26,22 +31,22 @@ impl EventHandler for Handler {
             match response {
                 Ok(reply) => {
                     if let Err(why) = msg.channel_id.say(&ctx.http, reply).await {
-                        println!("Error sending message: {:?}", why);
+                        error!("Error sending message: {:?}", why);
                     }
                 }
                 Err(err) => {
-                    println!("Error getting OpenAI response: {:?}", err);
+                    error!("Error getting OpenAI response: {:?}", err);
                 }
             }
         } else if msg.content == "!ping" {
             if let Err(why) = msg.channel_id.say(&ctx.http, "pong").await {
-                println!("Error sending message: {:?}", why);
+                error!("Error sending message: {:?}", why);
             }
         }
     }
 
     async fn ready(&self, _ctx: Context, ready: Ready) {
-        println!("{} is connected!", ready.user.name);
+        info!("{} is connected!", ready.user.name);
     }
 }
 
@@ -53,7 +58,7 @@ impl Handler {
         );
 
         let request_body = serde_json::json!({
-            "model": "gpt-4o",
+            "model": OPENAI_MODEL,
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": 4096,
             "temperature": 0.7,
@@ -64,7 +69,7 @@ impl Handler {
 
         let response = self
             .openai_client
-            .post("https://api.openai.com/v1/chat/completions")
+            .post(OPENAI_API_URL)
             .header("Content-Type", "application/json")
             .header("Authorization", format!("Bearer {}", self.openai_api_key))
             .json(&request_body)
@@ -73,7 +78,7 @@ impl Handler {
 
         if response.status().is_success() {
             let response_body: serde_json::Value = response.json().await?;
-            println!("Response body: {}", response_body);
+            info!("Response body: {}", response_body);
 
             let reply = response_body["choices"][0]["message"]["content"]
                 .as_str()
@@ -90,10 +95,10 @@ impl Handler {
 }
 
 fn string_to_user_id(user_id_str: &str) -> Result<UserId> {
-    match user_id_str.parse::<u64>() {
-        Ok(user_id_num) => Ok(UserId::new(user_id_num)),
-        Err(e) => Err(anyhow!("Failed to parse user ID: {}", e)),
-    }
+    user_id_str
+        .parse::<u64>()
+        .map(UserId::new)
+        .map_err(|e| anyhow!("Failed to parse user ID: {}", e))
 }
 
 #[shuttle_runtime::async_trait]
@@ -110,6 +115,8 @@ impl shuttle_runtime::Service for Gordon {
 async fn shuttle_main(
     #[shuttle_runtime::Secrets] secrets: shuttle_runtime::SecretStore,
 ) -> Result<Gordon, ShuttleError> {
+    tracing_subscriber::fmt::init();
+
     let token = secrets
         .get("DISCORD_TOKEN")
         .expect("Expected a token in the environment");
