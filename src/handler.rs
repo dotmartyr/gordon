@@ -1,4 +1,4 @@
-use crate::openai::OpenAIClient;
+use crate::openai::{OpenAIClient, OpenAIMessage};
 use anyhow::{anyhow, Result};
 use serenity::async_trait;
 use serenity::model::channel::Message;
@@ -15,7 +15,7 @@ pub struct Handler {
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
         if msg.mentions_user_id(self.bot_id) {
-            let response = self.get_openai_response(&msg.content).await;
+            let response = self.get_openai_response(&msg).await;
 
             match response {
                 Ok(reply) => {
@@ -40,8 +40,9 @@ impl EventHandler for Handler {
 }
 
 impl Handler {
-    pub async fn get_openai_response(&self, user_message: &str) -> Result<String> {
-        self.openai_client.ask(&user_message).await
+    pub async fn get_openai_response(&self, msg: &Message) -> Result<String> {
+        let openai_message = OpenAIMessage::new("user", &msg.content);
+        self.openai_client.ask(vec![openai_message]).await
     }
 }
 

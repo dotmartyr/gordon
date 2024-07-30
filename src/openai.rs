@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use reqwest::Client as ReqwestClient;
+use serde::Serialize;
 use serde_json::{json, Value};
 
 const OPENAI_API_URL: &str = "https://api.openai.com/v1/chat/completions";
@@ -10,6 +11,21 @@ pub struct OpenAIClient {
     api_key: String,
 }
 
+#[derive(Debug, Serialize)]
+pub struct OpenAIMessage {
+    role: String,
+    content: String,
+}
+
+impl OpenAIMessage {
+    pub fn new(role: &str, content: &str) -> Self {
+        Self {
+            role: role.to_string(),
+            content: content.to_string(),
+        }
+    }
+}
+
 impl OpenAIClient {
     pub fn new(api_key: String) -> Self {
         Self {
@@ -18,16 +34,16 @@ impl OpenAIClient {
         }
     }
 
-    pub async fn ask(&self, prompt: &str) -> Result<String> {
-        let request_body = self.create_request_body(&prompt);
+    pub async fn ask(&self, messages: Vec<OpenAIMessage>) -> Result<String> {
+        let request_body = self.create_request_body(&messages);
         let response = self.send_request(&request_body).await?;
         self.parse_response(response).await
     }
 
-    fn create_request_body(&self, prompt: &str) -> Value {
+    fn create_request_body(&self, messages: &[OpenAIMessage]) -> Value {
         json!({
             "model": OPENAI_MODEL,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages,
             "max_tokens": 4096,
             "temperature": 0.7,
             "top_p": 1.0,
