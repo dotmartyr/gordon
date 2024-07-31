@@ -74,7 +74,6 @@ impl OpenAIClient {
 
     async fn parse_response(&self, response: reqwest::Response) -> Result<String> {
         let response_body: Value = response.json().await?;
-        println!("Response body: {}", response_body);
 
         let reply = response_body["choices"][0]["message"]["content"]
             .as_str()

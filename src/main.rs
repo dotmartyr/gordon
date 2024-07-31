@@ -1,11 +1,11 @@
-mod handler;
+mod discord;
 mod openai;
 
 use std::collections::HashMap;
 
-use handler::{string_to_user_id, Handler};
+use discord::{string_to_user_id, Handler};
 use openai::OpenAIClient;
-use serenity::prelude::*;
+use serenity::prelude::{Client, GatewayIntents};
 use shuttle_runtime::{Error as ShuttleError, SecretStore};
 
 struct Gordon {
